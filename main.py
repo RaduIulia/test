@@ -6,6 +6,9 @@ from kivy.clock import Clock
 from plyer import accelerometer, compass
 import csv
 
+def format_sensor_data(data):
+    return f'{data:.2f}' if data is not None else 'N/A'
+
 class SensorDisplay(BoxLayout):
     def __init__(self, **kwargs):
         super(SensorDisplay, self).__init__(**kwargs)
@@ -39,57 +42,71 @@ class SensorDisplay(BoxLayout):
         self.save_data()
 
     def update_sensors(self, dt):
+        accel_data = None
+        compass_data = None
+        
         try:
             accel_data = accelerometer.acceleration
             if accel_data:
-                self.accel_label.text = f'Accelerometer Data:\nX: {accel_data[0]:.2f}\nY: {accel_data[1]:.2f}\nZ: {accel_data[2]:.2f}'
+                self.accel_label.text = (
+                    f'Accelerometer Data:\n'
+                    f'X: {format_sensor_data(accel_data[0])}\n'
+                    f'Y: {format_sensor_data(accel_data[1])}\n'
+                    f'Z: {format_sensor_data(accel_data[2])}'
+                )
         except NotImplementedError:
             self.accel_label.text = 'Accelerometer not implemented on this platform'
 
         try:
             compass_data = compass.orientation
             if compass_data:
-                self.compass_label.text = f'Compass Data:\nX: {compass_data[0]:.2f}\nY: {compass_data[1]:.2f}\nZ: {compass_data[2]:.2f}'
+                self.compass_label.text = (
+                    f'Compass Data:\n'
+                    f'X: {format_sensor_data(compass_data[0])}\n'
+                    f'Y: {format_sensor_data(compass_data[1])}\n'
+                    f'Z: {format_sensor_data(compass_data[2])}'
+                )
         except NotImplementedError:
             self.compass_label.text = 'Compass not implemented on this platform'
 
-        if self.recording:
+        if self.recording and accel_data and compass_data:
             self.sensor_data.append({
-                'accel_x': accel_data[0] if accel_data else None,
-                'accel_y': accel_data[1] if accel_data else None,
-                'accel_z': accel_data[2] if accel_data else None,
-                'compass_x': compass_data[0] if compass_data else None,
-                'compass_y': compass_data[1] if compass_data else None,
-                'compass_z': compass_data[2] if compass_data else None,
+                'accel_x': accel_data[0],
+                'accel_y': accel_data[1],
+                'accel_z': accel_data[2],
+                'compass_x': compass_data[0],
+                'compass_y': compass_data[1],
+                'compass_z': compass_data[2],
             })
 
     def save_data(self):
-        with open('accelerometer_data.csv', 'w', newline='') as csvfile:
-            fieldnames = ['accel_x', 'accel_y', 'accel_z']
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        if self.sensor_data:
+            with open('accelerometer_data.csv', 'w', newline='') as csvfile:
+                fieldnames = ['accel_x', 'accel_y', 'accel_z']
+                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
 
-            writer.writeheader()
-            for data in self.sensor_data:
-                writer.writerow({
-                    'accel_x': data['accel_x'],
-                    'accel_y': data['accel_y'],
-                    'accel_z': data['accel_z']
-                })
+                writer.writeheader()
+                for data in self.sensor_data:
+                    writer.writerow({
+                        'accel_x': data['accel_x'],
+                        'accel_y': data['accel_y'],
+                        'accel_z': data['accel_z']
+                    })
 
-        with open('compass_data.csv', 'w', newline='') as csvfile:
-            fieldnames = ['compass_x', 'compass_y', 'compass_z']
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            with open('compass_data.csv', 'w', newline='') as csvfile:
+                fieldnames = ['compass_x', 'compass_y', 'compass_z']
+                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
 
-            writer.writeheader()
-            for data in self.sensor_data:
-                writer.writerow({
-                    'compass_x': data['compass_x'],
-                    'compass_y': data['compass_y'],
-                    'compass_z': data['compass_z']
-                })
+                writer.writeheader()
+                for data in self.sensor_data:
+                    writer.writerow({
+                        'compass_x': data['compass_x'],
+                        'compass_y': data['compass_y'],
+                        'compass_z': data['compass_z']
+                    })
 
-        # Clear the data after saving
-        self.sensor_data = []
+            # Clear the data after saving
+            self.sensor_data = []
 
 class SensorApp(App):
     def build(self):
